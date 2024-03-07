@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "scrapers-intl"
+version = "0.1.0"
+description = ""
+authors = ["Tim Showers <showerst@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+openstates = "^6.18.2"
+python-dateutil = "^2.9.0.post0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
