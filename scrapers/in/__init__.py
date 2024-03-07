@@ -54,10 +54,9 @@ class IN(State):
     # https://bills.parliament.uk/
     legislative_sessions = [
         {
-            "_scraped_name": "2024",
             "classification": "primary",
             "identifier": "2024",
-            "name": "2024 Session",
+            "name": "2024",
             "start_date": "2024-01-01",
             "end_date": "2024-12-31",
             "active": True,

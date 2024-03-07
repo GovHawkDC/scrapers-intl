@@ -1,10 +1,11 @@
 import json
 import pytz
 import dateutil
+import re
+
 
 from openstates.scrape import Scraper, Bill
-
-import datetime as dt
+from .session_metadata import session_metadata
 
 
 class INBillScraper(Scraper):
@@ -12,11 +13,17 @@ class INBillScraper(Scraper):
     _tz = pytz.timezone("Asia/Kolkata")
 
     def scrape(self, session):
-        url = "https://sansad.in/api_rs/legislation/getBills?billName=&house=&ministryName=&mpCode=&billType=Government&billCategory=&billStatus=&introductionDateFrom=&introductionDateTo=&passedInLsDateFrom=&passedInLsDateTo=&passedInRsDateFrom=&passedInRsDateTo=&page=1&size=50&locale=en&sortOn=billIntroducedDate&sortBy=desc"
+        yield from self.scrape_page(session, 1)
+
+    def scrape_page(self, session, page_num: int):
+        self.info(f"Fetching page {page_num}")
+
+        ls_number = session_metadata[session]["ls_number"]
+        rs_number = session_metadata[session]["rs_number"]
+
+        url = f"https://sansad.in/api_rs/legislation/getBills?loksabha={ls_number}&sessionNo={rs_number}&billName=&house=&ministryName=&billType=&billCategory=&billStatus=&introductionDateFrom=&introductionDateTo=&passedInLsDateFrom=&passedInLsDateTo=&passedInRsDateFrom=&passedInRsDateTo=&page={page_num}&size=100&locale=en&sortOn=billIntroducedDate&sortBy=desc"
         response = self.get(url).content
         rows = json.loads(response)
-
-        # TODO: metadata
 
         for row in rows["records"]:
             bill_num = f"{row['billYear']} {row['billNumber']}"
@@ -35,16 +42,20 @@ class INBillScraper(Scraper):
 
             bill.add_source("https://sansad.in/rs/legislation/bills")
 
-            # todo errataFile reportFile billSynopsisFile billGazettedFile
-
             self.scrape_actions(bill, row)
             self.scrape_sponsors(bill, row)
             self.scrape_versions(bill, row)
+            self.scrape_documents(bill, row)
 
             if row["billCategory"]:
                 bill.add_subject(row["billCategory"])
 
             yield bill
+
+        if rows["_metadata"]["currentPageNumber"] < rows["_metadata"]["totalPages"]:
+            if page_num == 1:
+                self.info(f"{rows['_metadata']['totalPages']} pages found.")
+            yield from self.scrape_page(session, page_num + 1)
 
     def scrape_actions(self, bill: Bill, row: dict):
         chamber = "lower" if row["billIntroducedInHouse"] == "Lok Sabha" else "upper"
@@ -127,7 +138,7 @@ class INBillScraper(Scraper):
             )
         else:
             bill.add_sponsorship(
-                row["ministryName"],
+                self.strip_extra_spaces(row["ministryName"]),
                 entity_type="organization",
                 primary=True,
                 classification="primary",
@@ -149,3 +160,6 @@ class INBillScraper(Scraper):
                     media_type="application/pdf",
                     on_duplicate="ignore",
                 )
+
+    def strip_extra_spaces(self, val: str) -> str:
+        return re.sub(r"\s+", " ", val)
