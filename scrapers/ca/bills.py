@@ -7,7 +7,7 @@ from openstates.scrape import Scraper, Bill
 import datetime as dt
 
 class CABillScraper(Scraper):
-    _tz = pytz.timezone("Europe/Dublin")
+    _tz = pytz.timezone("America/Toronto")
 
     def scrape(self, session):
         url = "https://www.parl.ca/legisinfo/en/bills/json"
@@ -54,8 +54,41 @@ class CABillScraper(Scraper):
         bill.add_source(json_url)
 
         self.scrape_versions(bill, row)
+        self.scrape_actions(bill, row)
+
+        if row['SimilarBills']:
+            self.scrape_similar(bill, row['SimilarBills'])
 
         yield bill
+
+    def scrape_actions(self, bill: Bill, row: dict):
+        for stage in row['BillStages']['HouseBillStages']:
+            self.scrape_stages(bill, stage, "lower")
+        for stage in row['BillStages']['SenateBillStages']:
+            self.scrape_stages(bill, stage, "upper")
+        for stage in row['BillStages']['RoyalAssent']:
+            self.scrape_stages(bill, stage, "executive")            
+
+
+    def scrape_similar(self, bill: Bill, rows: dict):
+        for row in rows:
+            bill.add_related_bill(
+                row['NumberCode'],
+                f"{row['ParliamentNumber']}-{row['SessionNumber']}",
+                "related"
+            )
+
+    def scrape_stages(self, bill: Bill, stage: dict, chamber: str):
+        for e in stage['SignificantEvents']:
+            self.info(e["EventNameEn"])
+            when = dateutil.parser.parse(e['EventDateTime'])
+            when = self._tz.localize(when)
+            bill.add_action(
+                e["EventNameEn"],
+                when,
+                chamber=chamber,
+                classification=[] # TODO classifier
+            )
 
     def scrape_versions(self, bill: Bill, row: dict):
         # https://www.parl.ca/Content/Bills/441/Government/C-51/C-51_4/C-51_4.PDF
