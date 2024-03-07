@@ -11,6 +11,7 @@ from .bills import INBillScraper
 
 # from .events import A2EventScraper
 
+
 class IN(State):
     division_id = "ocd-division/country:ie"
     classification = "legislature"
