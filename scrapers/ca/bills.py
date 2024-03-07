@@ -18,10 +18,15 @@ class CABillScraper(Scraper):
             yield from self.scrape_bill(session, row)
 
     def scrape_bill(self, session, row):
-
-        chamber = "lower" if "House" in row['BillDocumentTypeNameEn'] else "upper"
-
+        session_id = f"{row['ParliamentNumber']}-{row['SessionNumber']}"
         bill_num = row['NumberCode']
+
+        # the big bulk JSON doesn't have all the statuses / sponsors filled in
+        json_url = f"https://www.parl.ca/LegisInfo/en/bill/{session_id}/{bill_num}/json"
+        response = self.get(json_url).content
+        row = json.loads(response)[0]
+
+        chamber = "lower" if "House" in row['OriginatingChamberNameEn'] else "upper"
 
         bill = Bill(
             bill_num,
@@ -34,10 +39,19 @@ class CABillScraper(Scraper):
         if row['ShortTitleEn']:
             bill.add_title(row['LongTitleEn'])
 
-        session_id = f"{row['ParliamentNumber']}-{row['SessionNumber']}"
+        bill.add_sponsorship(
+            row['SponsorPersonName'],
+            classification="primary",
+            entity_type="person",
+            primary=True
+        )
+
+        if row['ShortLegislativeSummaryEn']:
+            bill.add_abstract(row['ShortLegislativeSummaryEn'], "Short Summary")
 
         bill_url = f"https://www.parl.ca/legisinfo/en/bill/{session_id}/{row['NumberCode']}"
         bill.add_source(bill_url)
+        bill.add_source(json_url)
 
         self.scrape_versions(bill, row)
 
@@ -72,11 +86,4 @@ class CABillScraper(Scraper):
                 on_duplicate="ignore"
             )
 
-        # if bill['PassedFirstChamberSecondReading']:
-        #     bill.add_version_link(
-        #         "Second Reading",
-        #         f"https://www.parl.ca/Content/Bills/{session_id}/Government/{bill_num}/{bill_num}_2/{bill_num}_2.PDF",
-        #         media_type="applicaton/pdf",
-        #         on_duplicate="ignore"
-        #     )
 # PYTHONPATH=scrapers poetry run os-update ca bills --scrape
