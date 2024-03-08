@@ -9,7 +9,6 @@ from openstates.metadata.models import (
 
 from .bills import CABillScraper
 
-# from .events import A2EventScraper
 
 class CA(State):
     division_id = "ocd-division/country:ca"
@@ -22,6 +21,7 @@ class CA(State):
         # "events": A2EventScraper,
     }
 
+    # This is nonense, just a placeholder
     org_id = uuid.uuid4()
     org_id = f"ocd-organization/{org_id}"
     metadata = modelState(
@@ -31,7 +31,7 @@ class CA(State):
         capital_tz="America/Central",
         fips="48",
         unicameral=True,
-        legislature_name="Oireachtas",
+        legislature_name="Parliament",
         legislature_organization_id="ocd-organization/8ab77a54-0646-413c-a63a-dc85154282b8",
         executive_name="Executive",
         executive_organization_id="ocd-organization/4c8c2a9c-f33c-476d-bf81-266eb72193f8",
