@@ -3,6 +3,7 @@ import pytz
 import dateutil
 
 from openstates.scrape import Scraper, Bill, VoteEvent
+from openstates.data.common import BILL_ACTION_CLASSIFICATIONS
 
 import datetime as dt
 
@@ -11,6 +12,8 @@ class CABillScraper(Scraper):
     _tz = pytz.timezone("America/Toronto")
 
     def scrape(self, session):
+        BILL_ACTION_CLASSIFICATIONS.append("royal-assent")
+
         url = "https://www.parl.ca/legisinfo/en/bills/json"
         response = self.get(url).content
         rows = json.loads(response)
@@ -92,7 +95,7 @@ class CABillScraper(Scraper):
                 e["EventNameEn"],
                 when,
                 chamber=chamber,
-                classification=[],  # TODO classifier
+                classification=["royal-assent"],  # TODO classifier
             )
 
     def scrape_versions(self, bill: Bill, row: dict):
